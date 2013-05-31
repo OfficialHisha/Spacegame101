@@ -2,15 +2,23 @@
 class Asteroid
   attr_reader :x, :y
 
-  def initialize(animation)
-    @animation = animation
-    @color = Gosu::Color.new(0xff000000)
+  def initialize(window)
+    @image = Gosu::Image.new(window, "media/asteroid.png", false)
+    @vel_x = @vel_y = 1
+    @angle = rand(10)
     @x = rand * 640
     @y = rand * 480
   end
   
+  def move
+    @x += @vel_x
+    @y += @vel_y
+    @x %= 640
+    @y %= 480
+    @angle += 4
+  end
+  
   def draw  
-    img = @animation[Gosu::milliseconds / 100 % @animation.size];
-    img.draw(@x - img.width / 2.0, @y - img.height / 2.0, ZOrder::Elements, 1, 1, @color, :add)
+    @image.draw_rot(@x, @y, 1, @angle)
   end
 end

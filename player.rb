@@ -5,10 +5,14 @@ class Player# Here we define the class called player and assigned variables, whi
     @x = @y = @vel_x = @vel_y = @angle = 0.0
     @sound_collect = Gosu::Sample.new(window, "media/collect.wav")
     @sound_upgrade = Gosu::Sample.new(window, "media/upgrade.wav")
+    @sound_explosion = Gosu::Sample.new(window, "media/explosion.wav")
     
-    @level = 0
+    @lives = 3
+    @speedlevel = 0
+    @maxspeedlevel = 10
     @score = 0
     @speed = 0.2
+    @window = window
   end
 
   def warp(x, y)
@@ -38,12 +42,19 @@ class Player# Here we define the class called player and assigned variables, whi
     @vel_y *= 0.95
   end
 
-  def boost# This function is called when we press the upgrade button "Speed upgrade"
-    if @score > 49 && @level < 10
+  def speedboost# This function is called when we press the upgrade button "Speed upgrade"
+    if @score > 49 && @speedlevel < @maxspeedlevel
       @score -= 50
       @speed += 0.01
-      @level += 1
-      @sound_upgrade.play
+      @speedlevel += 1
+      @sound_upgrade.play(@window.mute)
+    end
+  end
+  def liveboost# This function is called when we press the upgrade button "More lives"
+    if @score > 499
+      @score -= 500
+      @lives += 1
+      @sound_upgrade.play(@window.mute)
     end
   end
   
@@ -57,17 +68,40 @@ class Player# Here we define the class called player and assigned variables, whi
   def level
     @level
   end
+  def maxlevel
+    @maxlevel
+  end
+  def lives
+    @lives
+  end
 
   def collect_stars(stars)# This function is called when we hit a star with our ship
     if stars.reject! {|star| Gosu::distance(@x, @y, star.x, star.y) < 35 } then
       @score += 1
-      @sound_collect.play
+      @sound_collect.play(@window.mute)
+    end
+  end
+  def hit_asteroid(asteroid)# This function is called when we hit an asteroid with our ship
+    if asteroid.reject! {|asteroid| Gosu::distance(@x, @y, asteroid.x, asteroid.y) < 35 } then
+      if lives > 1
+        @sound_explosion.play(@window.mute)
+        @lives -= 1
+      else
+        @sound_explosion.play(@window.mute)
+        @window.loose
+      end
     end
   end
   
-  def asteroid_hit(asteroid)
-    if asteroid.reject! {|asteroid| Gosu::distance(@x, @y, asteroid.x, asteroid.y) < 35 } then
-      close
+  def cheats(id)
+    if id == 1
+        @speed += 1
+    end
+    if id == 2
+        @score += 100
+    end
+    if id == 3
+        @maxlevel += 10
     end
   end
 end

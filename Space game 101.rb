@@ -18,6 +18,7 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
     @sound_switch = Gosu::Sample.new(self, "media/switch.wav")
     @sound_alarm = Gosu::Sample.new(self, "media/alarm.wav")
     @song = Gosu::Song.new(self, "media/song.ogg")
+    @song2 = Gosu::Song.new(self, "media/song2.ogg")
 	@fullscreen = fullscreen
 
     @cursor = Gosu::Image.new(self, "media/cursor.png", false)
@@ -30,7 +31,6 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
     @player.warp(320, 240)
     
     @star_anim = Gosu::Image::load_tiles(self, "media/star2.png", 32, 32, false)
-	@asteroid_anim = Gosu::Image::load_tiles(self, "media/asteroid.png", 32, 32, false)
 	@asteroids = []
     @stars = []
     @buttons = []
@@ -41,15 +41,18 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
     @font = Gosu::Font.new(self, Gosu::default_font_name, 20)
     
     @song.play(true)
+    @mute = 1
     
     @buttons.push(Button.new(self, 10, 120, 1, 0.25, "Start Game", 20, 5))
     @buttons.push(Button.new(self, 10, 160, 1, 0.25, "Quit Game", 20, 5))
     if !@fullscreen
 	  @buttons.push(Button.new(self, 150, 120, 1, 0.25, "Fullscreen", 20, 5))
 	else
-      @buttons.push(Button.new(self, 150, 120, 1, 0.25, "Window", 20, 5))
+      @buttons.push(Button.new(self, 150, 120, 1, 0.25, "Windowed", 20, 5))
 	end
-    @upgradebuttons.push(Upgradebutton.new(self, 10, 145, 1, 0.25, "Speed Upgrade", 1, 5))
+    @buttons.push(Button.new(self, 10, 200, 1, 0.25, "Mute Game", 20, 5))
+    @upgradebuttons.push(Upgradebutton.new(self, 10, 145, 1, 0.25, "Speed Upgrade", 2, 5))
+    @upgradebuttons.push(Upgradebutton.new(self, 10, 185, 1, 0.25, "More lives", 20, 5))
 	
 	@mouse_debug = false
 	@debug = false
@@ -88,30 +91,35 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
         @player.accelerate
       end
     end
-
+    
+    @asteroids.each { |asteroid| asteroid.move }
     @player.move
     @player.collect_stars(@stars)
+    @player.hit_asteroid(@asteroids)
 
-    if rand(100) < 4 and @stars.size < 25 then
+    if rand(100) < 4 && @stars.size < 25 then
       if !@menu && !@upgrademenu
       @stars.push(Star.new(@star_anim))
       end
     end
-	
-	if rand(100) < 4 and @asteroids.size < 1 then
+    if rand(100) < 4 && @asteroids.size < 1 then
       if !@menu && !@upgrademenu
-      @asteroids.push(Asteroid.new(@asteroid_anim))
+      @asteroids.push(Asteroid.new(self))
       end
-    end
+    end	
   end
 
+  def mute
+    @mute
+  end
+  
   def draw
     if !@menu && !@upgrademenu
       @background_image.draw(0, 0, ZOrder::Background)
       @player.draw
       @stars.each { |star| star.draw }
-	  @asteroids.each { |asteroid| asteroid.draw }
-      @font.draw("Score: #{@player.score}", 10, 10, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+      @asteroids.each { |asteroid| asteroid.draw }
+      @font.draw("Score: #{@player.score} Lives: #{@player.lives}", 10, 10, ZOrder::UI, 1.0, 1.0, 0xffffff00)
     end
     
     if @menu
@@ -130,8 +138,9 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
 	  @upgradebuttons.each { |button| button.draw }
       @cursor.draw(mouse_x, mouse_y, ZOrder::Mouse)
       @background_image_menu_upgrade.draw(0, 0, ZOrder::Background)
-      @font.draw("costs 50 score. Level: #{@player.level}/10", 150, 150, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+      @font.draw("costs 50 score. Level: #{@player.level}/#{@player.maxlevel}", 150, 150, ZOrder::UI, 1.0, 1.0, 0xffffff00)
       @font.draw("Score: #{@player.score}.", 10, 120, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+      @font.draw("costs 500 score.", 150, 190, ZOrder::UI, 1.0, 1.0, 0xffffff00)
     end
     
     if !@menu && !@upgrademenu
@@ -139,25 +148,29 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
     end
   end
 
+  def loose
+    close
+  end
+  
   def button_down(id)# This functon detects which buttons are pressed.
     if id == Gosu::KbEscape# Kb*button* for keyboard buttons and Ms*button* for mouse buttons
       if @menu
-        @sound_switch.play
+        @sound_switch.play(@mute)
         close
       end
       if !@menu && !@upgrademenu
-        @sound_switch.play
+        @sound_switch.play(@mute)
         @menu = true
       end
       if @upgrademenu
-        @sound_switch.play
+        @sound_switch.play(@mute)
         @upgrademenu = false
       end
     end
     if id == Gosu::MsLeft
 	  if @menu
 	    if @buttons[0].pressed(mouse_x, mouse_y)# Start game
-          @sound_alarm.play
+          @sound_alarm.play(@mute)
           @menu = false
 		end
 	    if @buttons[1].pressed(mouse_x, mouse_y)# Quit game
@@ -165,25 +178,37 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
 		end
 		if @buttons[2].pressed(mouse_x, mouse_y)# Screen res
 		  if @fullscreen
-	        @sound_switch.play
+	        @sound_switch.play(@mute)
             close
             gamewindow = GameWindow.new(false).show
 		  else
-		    @sound_switch.play
+		    @sound_switch.play(@mute)
             close
             gamewindow = GameWindow.new(true).show
 		  end
 		end
+        if @buttons[3].pressed(mouse_x, mouse_y)# Mute
+		  if @mute == 1
+            @mute = 0
+            @song.stop
+          else
+            @mute = 1
+            @song.play
+          end
+		end
       end
 	  if @upgrademenu
 	    if @upgradebuttons[0].pressed(mouse_x, mouse_y)# Speed upgrade
-		  @player.boost
+		  @player.speedboost
+		end
+        if @upgradebuttons[1].pressed(mouse_x, mouse_y)# Lives
+		  @player.liveboost
 		end
 	  end
     end
     if id == Gosu::KbX
       if !@menu && !@upgrademenu
-        @sound_switch.play
+        @sound_switch.play(@mute)
         @upgrademenu = true
       end
 	end
@@ -193,6 +218,15 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
       else
 		@debug = true
 	  end
+    end
+    if id == Gosu::KbT
+        @player.cheats(1)
+    end
+    if id == Gosu::KbY
+        @player.cheats(2)
+    end
+    if id == Gosu::KbU
+        @player.cheats(3)
     end
   end
 end
