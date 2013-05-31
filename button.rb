@@ -1,5 +1,5 @@
-# This script is still W.I.P
-class Button# The class for our buttons
+# The class for our buttons
+class Button
   def initialize(window, x, y, w, h, text, textx, texty)
     @x = x
     @y = y

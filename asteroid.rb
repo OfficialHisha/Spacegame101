@@ -1,4 +1,4 @@
-# This script is still W.I.P
+# The class for the asteroids we should avoid
 class Asteroid
   attr_reader :x, :y
 

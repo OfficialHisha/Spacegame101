@@ -29,12 +29,15 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
     
     @player = Player.new(self)
     @player.warp(320, 240)
+    @alive = true
     
     @star_anim = Gosu::Image::load_tiles(self, "media/star2.png", 32, 32, false)
 	@asteroids = []
     @stars = []
     @buttons = []
     @upgradebuttons = []
+    
+    @maxroids = 1
 	
     @upgrademenu = false
     @menu = true
@@ -75,40 +78,46 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
 	end
 	
     if button_down? Gosu::KbLeft or button_down? Gosu::GpLeft then
-      if !@menu && !@upgrademenu
+      if !@menu && !@upgrademenu && @alive
         @player.turn_left
       end
     end
     
     if button_down? Gosu::KbRight or button_down? Gosu::GpRight then
-      if !@menu && !@upgrademenu
+      if !@menu && !@upgrademenu && @alive
         @player.turn_right
       end
     end
     
     if button_down? Gosu::KbUp or button_down? Gosu::GpButton0 then
-      if !@menu && !@upgrademenu
+      if !@menu && !@upgrademenu && @alive
         @player.accelerate
       end
     end
     
-    @asteroids.each { |asteroid| asteroid.move }
-    @player.move
-    @player.collect_stars(@stars)
-    @player.hit_asteroid(@asteroids)
+    if !@menu && !@upgrademenu && @alive
+      @asteroids.each { |asteroid| asteroid.move }
+      @player.move
+      @player.collect_stars(@stars)
+      @player.hit_asteroid(@asteroids)
+    end
 
     if rand(100) < 4 && @stars.size < 25 then
-      if !@menu && !@upgrademenu
+      if !@menu && !@upgrademenu && @alive
       @stars.push(Star.new(@star_anim))
       end
     end
-    if rand(100) < 4 && @asteroids.size < 1 then
-      if !@menu && !@upgrademenu
+    if rand(100) < 4 && @asteroids.size < @maxroids then
+      if !@menu && !@upgrademenu && @alive
       @asteroids.push(Asteroid.new(self))
       end
     end	
   end
 
+  def add_roid
+    @maxroids += 1
+  end
+  
   def mute
     @mute
   end
@@ -116,16 +125,28 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
   def draw
     if !@menu && !@upgrademenu
       @background_image.draw(0, 0, ZOrder::Background)
-      @player.draw
-      @stars.each { |star| star.draw }
-      @asteroids.each { |asteroid| asteroid.draw }
-      @font.draw("Score: #{@player.score} Lives: #{@player.lives}", 10, 10, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+      if @debug
+        @font.draw("Max roids: #{@maxroids}", 10, 50, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+      end
+      if @alive
+        @player.draw
+        @stars.each { |star| star.draw }
+        @asteroids.each { |asteroid| asteroid.draw }
+        @font.draw("Score: #{@player.score} Lives: #{@player.lives}", 10, 10, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+        @font.draw("Press X to go to the upgrade menu, Press ESC to go back to the main menu.", 10, 30, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+        else
+        @font.draw("You lost the game, you are dead.", 175, 190, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+        @font.draw("Press ESC to quit.", 230, 230, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+        @font.draw("Thanks for playing!", 225, 270, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+        @font.draw("This game is made by Matias Jensen, using the Ruby programming language.", 10, 450, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+      end
     end
     
     if @menu
 	  if @debug
         @font.draw("Debug: Mouse x: #{mouse_x}, Mouse y: #{mouse_y} OK?: #{@mouse_debug}", 5, 5, ZOrder::UI, 1.0, 1.0, 0xffffff00)
       end
+      @font.draw("Build 5", 540, 440, ZOrder::UI, 1.0, 1.0, 0xffffff00)
 	  @buttons.each { |button| button.draw }
       @cursor.draw(mouse_x, mouse_y, ZOrder::Mouse)
       @background_image_menu.draw(0, 0, ZOrder::Background)
@@ -138,18 +159,14 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
 	  @upgradebuttons.each { |button| button.draw }
       @cursor.draw(mouse_x, mouse_y, ZOrder::Mouse)
       @background_image_menu_upgrade.draw(0, 0, ZOrder::Background)
-      @font.draw("costs 50 score. Level: #{@player.level}/#{@player.maxlevel}", 150, 150, ZOrder::UI, 1.0, 1.0, 0xffffff00)
+      @font.draw("costs #{@player.speedprice} score. Level: #{@player.speedlevel}/#{@player.maxspeedlevel}", 150, 150, ZOrder::UI, 1.0, 1.0, 0xffffff00)
       @font.draw("Score: #{@player.score}.", 10, 120, ZOrder::UI, 1.0, 1.0, 0xffffff00)
       @font.draw("costs 500 score.", 150, 190, ZOrder::UI, 1.0, 1.0, 0xffffff00)
-    end
-    
-    if !@menu && !@upgrademenu
-      @font.draw("Press X to go to the upgrade menu, Press ESC to go back to the main menu.", 10, 30, ZOrder::UI, 1.0, 1.0, 0xffffff00)
     end
   end
 
   def loose
-    close
+    @alive = false
   end
   
   def button_down(id)# This functon detects which buttons are pressed.
@@ -165,6 +182,9 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
       if @upgrademenu
         @sound_switch.play(@mute)
         @upgrademenu = false
+      end
+      if !@alive
+        close
       end
     end
     if id == Gosu::MsLeft
@@ -207,7 +227,7 @@ class GameWindow < Gosu::Window# The game window class, this is controlling what
 	  end
     end
     if id == Gosu::KbX
-      if !@menu && !@upgrademenu
+      if !@menu && !@upgrademenu && @alive
         @sound_switch.play(@mute)
         @upgrademenu = true
       end

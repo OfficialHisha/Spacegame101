@@ -10,7 +10,9 @@ class Player# Here we define the class called player and assigned variables, whi
     @lives = 3
     @speedlevel = 0
     @maxspeedlevel = 10
+    @speedprice = 50
     @score = 0
+    @totalstars = 0
     @speed = 0.2
     @window = window
   end
@@ -43,10 +45,11 @@ class Player# Here we define the class called player and assigned variables, whi
   end
 
   def speedboost# This function is called when we press the upgrade button "Speed upgrade"
-    if @score > 49 && @speedlevel < @maxspeedlevel
-      @score -= 50
+    if @score > @speedprice-1 && @speedlevel < @maxspeedlevel
+      @score -= @speedprice
       @speed += 0.01
       @speedlevel += 1
+      @speedprice += 50
       @sound_upgrade.play(@window.mute)
     end
   end
@@ -65,20 +68,29 @@ class Player# Here we define the class called player and assigned variables, whi
   def score
     @score
   end
-  def level
-    @level
+  def speedlevel
+    @speedlevel
   end
-  def maxlevel
-    @maxlevel
+  def maxspeedlevel
+    @maxspeedlevel
   end
   def lives
     @lives
+  end
+  def speedprice
+    @speedprice
   end
 
   def collect_stars(stars)# This function is called when we hit a star with our ship
     if stars.reject! {|star| Gosu::distance(@x, @y, star.x, star.y) < 35 } then
       @score += 1
       @sound_collect.play(@window.mute)
+      if @totalstars > 99
+        @totalstars = 0
+        @window.add_roid
+      else
+        @totalstars += 1
+      end
     end
   end
   def hit_asteroid(asteroid)# This function is called when we hit an asteroid with our ship
@@ -101,7 +113,7 @@ class Player# Here we define the class called player and assigned variables, whi
         @score += 100
     end
     if id == 3
-        @maxlevel += 10
+        @maxspeedlevel += 10
     end
   end
 end
