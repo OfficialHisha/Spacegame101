@@ -1,6 +1,6 @@
 # The class for the stars we have to collect
 class Star
-  attr_reader :x, :y
+    attr_reader :x, :y
 
   def initialize(animation)
     @animation = animation
